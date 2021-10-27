@@ -1,3 +1,36 @@
+def error ( err, *notices ) :
+  d = {
+   -1 : "",
+    0 : "[Error] Lexer: invalid string",
+    1 : "[Error] Lexer: '@' may not be used",
+    2 : "[Error] Lexer: No assignment here",
+    3 : "[Error] Parser: parse() did not come to the end",
+    4 : "[Error] Parser: brackets do not match",
+    5 : "[Error] Lexer: invalid numeric",
+    6 : "[Error] Value: the value is not an integer",
+    7 : "[Error] Parser: factor() received invalid tokens",
+    8 : "[Error] Interpreter: Invalid node visitor",
+    9 : "[Error] Interpreter: Universe destroyal",
+   10 : "[Error] Interpreter: Object does not have this value",
+   11 : "[Error] Interpreter: Asked for reference from unary number operator",
+   12 : "[Error] Interpreter: Referenced uncreated variable",
+   13 : "[Error] Interpreter: Node has no value",
+   14 : "[Error] Interpreter: Binary operation failed"
+  }
+  n = list ( notices )
+  n = [ f"[Notice] {i}" for i in n ]
+  t = [ d [ err ]]
+  t += n
+  t = "\n".join ( t )
+  quit ( 1, t )
+
+def quit ( code = 0, error = None ) :
+  for s in streams :
+    streams [ s ].close ( )
+  if error :
+    print ( error )
+  exit ( code )
+
 class Token :
   def __init__ ( self, value, t ) :
     self.value = value
@@ -7,7 +40,10 @@ class Token :
     return "{}".format ( self.value )
 
 def asi ( j ) :
-  assert -2_147_483_647 <= j <= 2_147_483_647
+  try :
+    assert -2_147_483_647 <= j <= 2_147_483_647
+  except :
+    error ( 6 )
 
 def lexer ( f ) :
   import re
@@ -15,16 +51,20 @@ def lexer ( f ) :
   for s in re.findall ( r'''(?x)(?<!\\)".*?(?<!\\)"''', f ) :
     c = 0
     for a in strings : c += 1
-    st = [ * bytes ( eval ( s ), "utf8" )]
+    try :
+      e = eval ( s )
+    except :
+      error ( 0 )
+    st = [ * bytes ( e, "utf8" )]
     st.append ( 0 )
     string = { }
     for a, b in enumerate ( st ) :
       string [ a ] = b
     strings [ c ] = string
-    f = f.replace ( s, "@{}".format ( c ), 1 )
+    f = f.replace ( s, f"@{c}", 1 )
     d = d.replace ( s, "", 1 )
   if "@" in d :
-    raise Exception ( "Invalid syntax" )
+    error ( 1 )
   current = ""
   tokens_ = [ ]
   for i in f :
@@ -62,7 +102,10 @@ def lexer ( f ) :
       case "&" : t = "STR"
       case "=>" : t = "GET"
       case _ :
-        i = int ( i )
+        try :
+          i = int ( i )
+        except :
+          error ( 5 )
         asi ( i )
         t = "VAL"
     tokens.append ( Token ( i, t ))
@@ -82,7 +125,7 @@ class Parser :
       return None
     res = self.expr ( )
     if self.current.type != "END" :
-      raise Exception ( "Invalid syntax" )
+      error ( 3 )
     return res
 
   def expr ( self ) :
@@ -116,7 +159,7 @@ class Parser :
       self.n ( )
       res = self.expr ( )
       if self.current.type != "RBR" :
-        raise Exception ( "Invalid syntax" )
+        error ( 4 )
       self.n ( )
       return res
     elif token.type == "VAL" :
@@ -126,7 +169,7 @@ class Parser :
       self.n ( )
       return UnOp ( token, self.factor ( ))
     else :
-      raise Exception ( "Invalid syntax" )
+      error ( 7 )
 
 class Reference :
   def __init__ ( self, place, reference ) :
@@ -175,66 +218,81 @@ class Interpreter :
     return visiting ( node, ref )
 
   def ex ( self, node, ref ) :
-    raise Exception ( "Invalid Node Visitor visit{}".format (
-      type ( node ).__name__ ))
+    error ( 8, f"Node: {type ( node ).__name__}" )
 
   def visitBinOp ( self, node, ref ) :
-    match node.token.type :
-      case "ADD" :
-        j = self.visit ( node.left ) + self.visit ( node.right )
-        asi ( j )
-        return j
-      case "SUB" :
-        j = self.visit ( node.left ) - self.visit ( node.right )
-        asi ( j )
-        return j
-      case "MUL" :
-        j = self.visit ( node.left ) * self.visit ( node.right )
-        asi ( j )
-        return j
-      case "DIV" :
-        l, r = self.visit ( node.left ), self.visit ( node.right )
-        if l == r == 0 :
-          return 0
-        j = l / r
-        j = int ( j )
-        asi ( j )
-        return j
-      case "GET" :
-        if ref :
-          return Reference ( self.visit ( node.left ), self.visit ( node.right ))
-        else :
-          return self.visit ( node.left ) [ self.visit ( node.right )]
+    try :
+      match node.token.type :
+        case "ADD" :
+          j = self.visit ( node.left ) + self.visit ( node.right )
+          asi ( j )
+          return j
+        case "SUB" :
+          j = self.visit ( node.left ) - self.visit ( node.right )
+          asi ( j )
+          return j
+        case "MUL" :
+          j = self.visit ( node.left ) * self.visit ( node.right )
+          asi ( j )
+          return j
+        case "DIV" :
+          l, r = self.visit ( node.left ), self.visit ( node.right )
+          if l == r == 0 :
+            return 0
+          elif r == 0 :
+            error ( 9 )
+          j = l / r
+          j = int ( j )
+          asi ( j )
+          return j
+        case "GET" :
+          if ref :
+            return Reference ( self.visit ( node.left ), self.visit ( node.right ))
+          else :
+            try :
+              r = self.visit ( node.right )
+              return self.visit ( node.left ) [ r ]
+            except :
+              error ( 10, f"Value: {r}" )
+    except :
+      error ( 14, "left" + str ( node.left ),
+                  "right" + str ( node.right ))
 
   def visitUnOp ( self, node, ref ) :
-    match node.token.type :
-      case "NUM" :
-        r = self.visit ( node.right )
-        if ref : return Reference ( "numbers", r )
-        else : return numbers [ r ]
-      case "OBJ" :
-        r = self.visit ( node.right )
-        if ref : return Reference ( objects, r )
-        else : return objects [ r ]
-      case "STN" :
-        r = self.visit ( node.right )
-        if ref : return Reference ( "strings", r )
-        else : return strings [ r ]
-      case "STR" :
-        r = self.visit ( node.right )
-        if ref : return Reference ( "streams", r )
-        else : return ord ( streams [ r ].read ( 1 ))
-      case "SUB" :
-        r = self.visit ( node.right )
-        if ref : raise Exception ( "Asked for reference from unary number operator" )
-        else : return ( - r )
-      case "ADD" :
-        r = self.visit ( node.right )
-        if ref : raise Exception ( "Asked for reference from unary number operator" )
-        else : return r
+    try:
+      match node.token.type :
+        case "NUM" :
+          r = self.visit ( node.right )
+          if ref : return Reference ( "numbers", r )
+          else : return numbers [ r ]
+        case "OBJ" :
+          r = self.visit ( node.right )
+          if ref : return Reference ( objects, r )
+          else : return objects [ r ]
+        case "STN" :
+          r = self.visit ( node.right )
+          if ref : return Reference ( "strings", r )
+          else : return strings [ r ]
+        case "STR" :
+          r = self.visit ( node.right )
+          if ref : return Reference ( "streams", r )
+          else : return ord ( streams [ r ].read ( 1 ))
+        case "SUB" :
+          r = self.visit ( node.right )
+          if ref : error ( 11 )
+          else : return ( - r )
+        case "ADD" :
+          r = self.visit ( node.right )
+          if ref : error ( 11 )
+          else : return r
+    except :
+      error ( 12 )
 
   def visitVal ( self, node, ref ) :
-    return node.value
+    try :
+      return node.value
+    except :
+      error ( 13 )
 
 numbers = { 0 : 0 }
 objects = { }
@@ -242,11 +300,6 @@ streams = { 0 : open ( "/dev/stdin", "rb" ),
             1 : open ( "/dev/stdout", "wb" ),
             2 : open ( "/dev/stderr", "wb" )}
 strings = { }
-
-def quit ( ) :
-  for s in streams :
-    streams [ s ].close ( )
-  exit ( 0 )
 
 from sys import argv
 try :
@@ -267,7 +320,10 @@ code = [ c for c in code if c ]
 prepar = [ ]
 for line in code :
 
-  left, right = line.split ( "<=" )
+  try :
+    left, right = line.split ( "<=" )
+  except :
+    error ( 2 )
   left_t = lexer ( left )
   left_p = Parser ( left_t )
   left_pd = left_p.parse ( )
