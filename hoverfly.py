@@ -255,8 +255,8 @@ class Interpreter :
             except :
               error ( 10, f"Value: {r}" )
     except :
-      error ( 14, "left" + str ( node.left ),
-                  "right" + str ( node.right ))
+      error ( 14, "left: " + str ( node.left ),
+                  "right: " + str ( node.right ))
 
   def visitUnOp ( self, node, ref ) :
     try:
