@@ -26,7 +26,8 @@ def error ( err, *notices ) :
 
 def quit ( code = 0, error = None ) :
   for s in streams :
-    streams [ s ].close ( )
+    if s > 2 :
+      streams [ s ].close ( )
   if error :
     print ( error )
   exit ( code )
@@ -296,9 +297,9 @@ class Interpreter :
 
 numbers = { 0 : 0 }
 objects = { }
-streams = { 0 : open ( "/dev/stdin", "rb" ),
-            1 : open ( "/dev/stdout", "wb" ),
-            2 : open ( "/dev/stderr", "wb" )}
+streams = { 0 : open ( 0, "rb" ),
+            1 : open ( 1, "wb" ),
+            2 : open ( 2, "wb" )}
 strings = { }
 
 from sys import argv
