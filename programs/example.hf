@@ -1,0 +1,21 @@
+#1 <= -1
+^0 <=
+^0 => 1 <= #1
+<= lib/io/putint
+
+^0 <=
+^0 <= " is "
+<= lib/io/puts
+
+^0 <=
+^0 => 1 <= #1
+<= lib/math/isneg
+
+#0 <= #0 + ^0 => 1 * 3
+
+^0 <= "not negative\n"
+<= lib/io/puts
+#0 <= #0 + 2
+
+^0 <= "negative\n"
+<= lib/io/puts
