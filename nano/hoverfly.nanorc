@@ -1,0 +1,22 @@
+## Syntax highlighting for Hoverfly
+
+syntax hoverfly "\.hf$"
+comment "::"
+
+#arrows
+color brightcyan "(<=|=>)"
+
+#imports
+color italic,lightblue "^[ ]*<= .*$"
+
+#variables
+color bold,lagoon "(#|\^|&)[ \t]*[0-9]+"
+
+#strings
+color cyan ""([^"\]|\\.)*"|""""
+
+#trailing whitespace
+color ,green "[ ]+$"
+
+#comments
+color grey "^[ ]*::.*$"
