@@ -1,6 +1,6 @@
 ## Syntax highlighting for Hoverfly
 
-syntax hoverfly "\.hf$"
+syntax hoverfly "\.(hf/fly)$"
 comment "::"
 
 #arrows

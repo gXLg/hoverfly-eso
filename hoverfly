@@ -9,6 +9,9 @@ except:
   print("[Error] Hoverfly: File not found")
   quit()
 
+import os
+base = os.path.dirname(__file__)
+
 def error(err, *notices):
   d = {
    -1: "",
@@ -30,7 +33,9 @@ def error(err, *notices):
    15: "[Error] Lexer: Invalid token, rofl",
    16: "[Error] Value: Not a byte, bro",
    17: "[Error] Import: File not found",
-   18: "[Error] Interpreter: Tried to get from non-object"
+   18: "[Error] Interpreter: Tried to get from non-object",
+   19: "[Error] Import: this sauce is not available",
+   20: "[Error] Import: need sauce!"
   }
   n = [*notices]
   n = [f"[Notice] {i}" for i in n]
@@ -365,7 +370,18 @@ def run(code):
 
     left, right = prepar[numbers[0]]
     if left == "import":
-      library = right + ".fly"
+      if ":" in right:
+        source, path = right.split(":")
+      else:
+        error(20, f"Import statement: {right}")
+      match source:
+        case "lib":
+          path = base + path
+        case "base":
+          pass
+        case _:
+          error(19, f"Source: {source}")
+      library = path + ".fly"
       if library in imports:
         imported = imports[library]
       else:
