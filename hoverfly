@@ -11,6 +11,7 @@ except:
 
 import os
 base = os.path.dirname(__file__)
+lib_base = os.path.join(base, "lib")
 
 def error(err, *notices):
   d = {
@@ -376,7 +377,7 @@ def run(code):
         error(20, f"Import statement: {right}")
       match source:
         case "lib":
-          path = base + path
+          path = os.path.join(lib_base, path)
         case "base":
           pass
         case _:
