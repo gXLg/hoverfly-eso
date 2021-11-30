@@ -13,6 +13,8 @@ import os
 base = os.path.dirname(__file__)
 lib_base = os.path.join(base, "lib")
 
+import re
+
 def error(err, *notices):
   d = {
    -1: "",
@@ -36,7 +38,8 @@ def error(err, *notices):
    17: "[Error] Import: File not found",
    18: "[Error] Interpreter: Tried to get from non-object",
    19: "[Error] Import: this sauce is not available",
-   20: "[Error] Import: need sauce!"
+   20: "[Error] Import: need sauce!",
+   21: "[Error] Interpreter: Cannot assign to flags!"
   }
   n = [*notices]
   n = [f"[Notice] {i}" for i in n]
@@ -67,7 +70,6 @@ def asi(j):
     error(6)
 
 def lexer(f):
-  import re
   d = f
   for s in re.findall(r'''(?x)(?<!\\)".*?(?<!\\)"''', f):
     c = 0
@@ -89,7 +91,7 @@ def lexer(f):
   current = ""
   tokens_ = []
   for i in f:
-    if i in "+-*/()@#^&":
+    if i in "+-*/()@#^&!":
       if current:
         tokens_.append(current)
         current = ""
@@ -125,6 +127,7 @@ def lexer(f):
       case "#": t = "NUM"
       case "^": t = "OBJ"
       case "&": t = "STR"
+      case "!": t = "FLG"
       case "=>": t = "GET"
       case _:
         try:
@@ -191,7 +194,7 @@ class Parser:
     elif token.type == "VAL":
       self.n()
       return Val(token)
-    elif token.type in ["NUM", "OBJ", "STN", "STR", "SUB", "ADD"]:
+    elif token.type in ["NUM", "OBJ", "STN", "STR", "FLG", "SUB", "ADD"]:
       self.n()
       return UnOp(token, self.factor())
     else:
@@ -231,9 +234,10 @@ class Val:
     return str(self.token)
 
 class Interpreter:
-  def __init__(self, node, numbers):
+  def __init__(self, node, numbers, flags):
     self.root = node
     self.numbers = numbers
+    self.flags = flags
 
   def eval(self, ref = False):
     return self.visit(self.root, ref)
@@ -306,6 +310,10 @@ class Interpreter:
           r = self.visit(node.right)
           if ref: return Reference("streams", r)
           else: return ord(streams[r].read(1))
+        case "FLG":
+          r = self.visit(node.right)
+          if ref: error(21)
+          else: return self.flags[r]
         case "SUB":
           r = self.visit(node.right)
           if ref: error(11)
@@ -333,6 +341,7 @@ imports = { }
 def run(code):
 
   numbers = { 0: 0 }
+  flags = { 0: -2 }
 
   if code.strip() == "&?":
     for s in streams:
@@ -342,14 +351,20 @@ def run(code):
   code = [c for c in code.split("\n")]
   code = [c for c in code if c]
   prepar = []
+  l = -1
   for line in code:
 
     if line.strip()[:2] == "::":
       continue
 
-    try:
+    if "<=" in line:
       left, right = line.split("<=")
-    except:
+    elif re.findall(r"!\W*\-?\d", line):
+      flag = int(line.strip()[1:].strip())
+      asi(flag)
+      flags[flag] = l
+      continue
+    else:
       error(2)
 
     if left.strip():
@@ -366,6 +381,8 @@ def run(code):
 
 
     prepar.append([left_pd, right_pd])
+
+    l += 1
 
   while 0 <= numbers[0] < len(prepar):
 
@@ -393,10 +410,10 @@ def run(code):
           error(17, f"Lib: {library}")
       run(imported)
     else:
-      inter_l = Interpreter(left, numbers)
+      inter_l = Interpreter(left, numbers, flags)
       source = inter_l.eval(True)
 
-      inter_r = Interpreter(right, numbers)
+      inter_r = Interpreter(right, numbers, flags)
       result = inter_r.eval()
 
       if source.place == "numbers":
@@ -409,8 +426,10 @@ def run(code):
             error(16)
         streams[source.reference].write(bytes([result or 0]))
       else:
-        if result is None or result == "":
+        if result is None:
           result = {}
+        elif result == "":
+          result = { 0: 0 }
         source.place[source.reference] = result
 
     numbers[0] += 1

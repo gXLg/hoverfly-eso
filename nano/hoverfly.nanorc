@@ -10,7 +10,10 @@ color brightcyan "(<=|=>)"
 color italic,lightblue "^[ ]*<= .*$"
 
 #variables
-color bold,lagoon "(#|\^|&)[ \t]*[0-9]+"
+color bold,lagoon "(#|\^|&|!)[ ]*\-?[0-9]+"
+
+#pointer marker
+color brightred "PTR"
 
 #strings
 color cyan ""([^"\]|\\.)*"|""""
@@ -19,4 +22,5 @@ color cyan ""([^"\]|\\.)*"|""""
 color ,green "[ ]+$"
 
 #comments
-color grey "^[ ]*::.*$"
+color white "^[ ]*::.*$"
+
