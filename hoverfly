@@ -319,7 +319,10 @@ class Interpreter:
         case "STR":
           r = self.visit(node.right)
           if ref: return Reference("streams", r)
-          else: return ord(streams[r].read(1))
+          else:
+            c = streams[r].read(1)
+            if c: return ord(c)
+            else: return 0
         case "FLG":
           r = self.visit(node.right)
           if ref: error(21)
@@ -333,7 +336,7 @@ class Interpreter:
           if ref: error(11)
           else: return r
     except:
-      error(12)
+      error(12, f"Reference: {node}")
 
   def visitVal(self, node, ref):
     try:

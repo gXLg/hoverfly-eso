@@ -1,3 +1,8 @@
+:: args
+::   0.1 : input number
+:: return
+::   0.1 : number < 0
+
 #1 <= ^0 => 1
 ^0 <=
 
