@@ -18,32 +18,32 @@ import re
 def error(err, *notices):
   d = {
    -1: "",
-    0: "[Error] Lexer: Wrong string, bro",
-    1: "[Error] Lexer: '@' is not allowed, FBI is already coming",
-    2: "[Error] Lexer: You even not assign, wathca want?",
-    3: "[Error] Parser: parse() did not come to the end",
-    4: "[Error] Parser: Brackets not matched",
-    5: "[Error] Lexer: Wrong numeric, bro",
-    6: "[Error] Value: The value is not an integer, bro",
-    7: "[Error] Parser: factor() received invalid tokens and did not like it",
-    8: "[Error] Interpreter: Invalid node visitor",
-    9: "[Error] Interpreter: Universe destroyal OwO",
-   10: "[Error] Interpreter: Object doesn't own this value",
-   11: "[Error] Interpreter: Asked for reference from unary number operator but got bullied",
-   12: "[Error] Interpreter: You referenced, what even wasn't there",
-   13: "[Error] Interpreter: Wtf is this? This node doesn't even have a value",
-   14: "[Error] Interpreter: Binary operation failed, now you are gay",
-   15: "[Error] Lexer: Invalid token, rofl",
-   16: "[Error] Value: Not a byte, bro",
-   17: "[Error] Import: File not found",
-   18: "[Error] Interpreter: Tried to get from non-object",
-   19: "[Error] Import: this sauce is not available",
-   20: "[Error] Import: need sauce!",
-   21: "[Error] Interpreter: Cannot assign to flags!"
+    0: "Lexer: Wrong string, bro",
+    1: "Lexer: '@' is not allowed, FBI is already coming",
+    2: "Lexer: You even not assign, wathca want?",
+    3: "Parser: parse() did not come to the end",
+    4: "Parser: Brackets not matched",
+    5: "Lexer: Wrong numeric, bro",
+    6: "Value: The value is not an integer, bro",
+    7: "Parser: factor() received invalid tokens and did not like it",
+    8: "Interpreter: Invalid node visitor",
+    9: "Interpreter: Universe destroyal OwO",
+   10: "Interpreter: Object doesn't own this value",
+   11: "Interpreter: Asked for reference from unary number operator but got bullied",
+   12: "Interpreter: You referenced, what even wasn't there",
+   13: "Interpreter: Wtf is this? This node doesn't even have a value",
+   14: "Interpreter: Binary operation failed, now you are gay",
+   15: "Lexer: Invalid token, rofl",
+   16: "Value: Not a byte, bro",
+   17: "Import: File not found",
+   18: "Interpreter: Tried to get from non-object",
+   19: "Import: this sauce is not available",
+   20: "Import: need sauce!",
+   21: "Interpreter: Cannot assign to flags!"
   }
   n = [*notices]
   n = [f"[Notice] {i}" for i in n]
-  t = [d[err]]
+  t = [f"[Error] {d[err]}"]
   t += n
   t = "\n".join(t)
   quit(err, t)
@@ -75,7 +75,17 @@ def lexer(f):
     c = 0
     for a in strings: c += 1
     try:
-      e = eval(s)
+      replace = {
+        "\\e": "\e",
+        "\\n": "\n",
+        "\\t": "\t",
+        "\\'": "'",
+        "\\\"": "\"",
+        "\\b": "\b"
+      }
+      e = s[1:-1]
+      for search in replace:
+        e = e.replace(search, replace[search])
     except:
       error(0)
     st = [*bytes(e, "utf8")]
@@ -277,7 +287,7 @@ class Interpreter:
           asi(j)
           return j
         case "GET":
-          if node.left.token.type != "OBJ":
+          if node.left.token.type not in ["OBJ", "GET"]:
             error(18)
           if ref:
             return Reference(self.visit(node.left), self.visit(node.right))
@@ -286,10 +296,10 @@ class Interpreter:
               r = self.visit(node.right)
               return self.visit(node.left)[r]
             except:
-              error(10, f"Value: {r}")
+              error(10, f"Value {r} from {node.left}")
     except:
       error(14, "left: " + str(node.left),
-                  "right: " + str(node.right))
+                "right: " + str(node.right))
 
   def visitUnOp(self, node, ref):
     try:
