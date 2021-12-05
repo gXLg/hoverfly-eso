@@ -39,7 +39,8 @@ def error(err, *notices):
    18: "Interpreter: Tried to get from non-object",
    19: "Import: this sauce is not available",
    20: "Import: need sauce!",
-   21: "Interpreter: Cannot assign to flags!"
+   21: "Interpreter: Cannot assign to flags!",
+   22: "Lexer: this not a char  grrrr"
   }
   n = [*notices]
   n = [f"[Notice] {i}" for i in n]
@@ -71,18 +72,19 @@ def asi(j):
 
 def lexer(f):
   d = f
+  replace = {
+    "\\e": "\e",
+    "\\n": "\n",
+    "\\t": "\t",
+    "\\'": "'",
+    "\\\"": "\"",
+    "\\\\": "\\",
+    "\\b": "\b"
+  }
   for s in re.findall(r'''(?x)(?<!\\)".*?(?<!\\)"''', f):
     c = 0
     for a in strings: c += 1
     try:
-      replace = {
-        "\\e": "\e",
-        "\\n": "\n",
-        "\\t": "\t",
-        "\\'": "'",
-        "\\\"": "\"",
-        "\\b": "\b"
-      }
       e = s[1:-1]
       for search in replace:
         e = e.replace(search, replace[search])
@@ -98,6 +100,13 @@ def lexer(f):
     d = d.replace(s, "", 1)
   if "@" in d:
     error(1)
+  for c in re.findall(r"""('\\?[^\\]'|'\\\\')""", f):
+    ch = c[1:-1]
+    if ch in replace:
+      ch = replace[ch]
+    if len(ch) > 1:
+      error(22, f"Char: {c}")
+    f = f.replace(c, str(ord(ch)))
   current = ""
   tokens_ = []
   for i in f:
