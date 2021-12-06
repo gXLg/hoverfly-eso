@@ -67,7 +67,7 @@ class Token:
     return "{}".format(self.value)
 
 def asi(j):
-  if not -2_147_483_647 <= j <= 2_147_483_647:
+  if not -9_223_372_036_854_775_808 <= j <= 9_223_372_036_854_775_807:
     error(6)
 
 def lexer(f):
@@ -500,6 +500,8 @@ def run(code = None, lib = None):
   #  print(s)
   #except (KeyError, TypeError):
   #  pass
+  #print(objects[2] if 2 in objects else None)
+
 
   return
 
