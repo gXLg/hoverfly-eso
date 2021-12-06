@@ -360,51 +360,82 @@ streams = { 0: open(0, "rb"),
 strings = { }
 imports = { }
 
-def run(code):
+def run(code = None, lib = None):
 
   numbers = { 0: 0 }
   flags = { 0: -2 }
+
+  prepar = []
+  if lib is not None:
+    if lib in imports:
+      code = imports[lib]["code"]
+      if "tree" in imports[lib]:
+        prepar = imports[lib]["tree"]
 
   if code.strip() == "&?":
     for s in streams:
       print(s, streams[s])
     quit()
 
-  code = [c for c in code.split("\n")]
-  code = [c for c in code if c]
-  prepar = []
-  l = -1
-  for line in code:
+  if prepar:
+    code = [c for c in code.split("\n")]
+    code = [c.strip() for c in code if c.strip()]
+    l = -1
+    for line in code:
 
-    if line.strip()[:2] == "::":
-      continue
+      if line[:2] == "::":
+        continue
 
-    if "<=" in line:
-      left, right = line.split("<=")
-    elif re.findall(r"!\W*\-?\d", line):
-      flag = int(line.strip()[1:].strip())
-      asi(flag)
-      flags[flag] = l
-      continue
-    else:
-      error(2)
+      if "<=" in line:
+        left, right = line.split("<=")
+      elif re.findall(r"!\W*\-?\d", line):
+        flag = int(line.strip()[1:].strip())
+        asi(flag)
+        flags[flag] = l
+        continue
+      else:
+        error(2)
 
-    if left.strip():
-      left_t = lexer(left)
-      left_p = Parser(left_t)
-      left_pd = left_p.parse()
+      l += 1
 
-      right_t = lexer(right)
-      right_p = Parser(right_t)
-      right_pd = right_p.parse()
-    else:
-      left_pd = "import"
-      right_pd = right.strip()
+  else:
+    code = [c for c in code.split("\n")]
+    code = [c.strip() for c in code if c.strip()]
+    l = -1
+    for line in code:
+
+      if line[:2] == "::":
+        continue
+
+      if "<=" in line:
+        left, right = line.split("<=")
+      elif re.findall(r"!\W*\-?\d", line):
+        flag = int(line.strip()[1:].strip())
+        asi(flag)
+        flags[flag] = l
+        continue
+      else:
+        error(2)
+
+      if left.strip():
+        left_t = lexer(left)
+        left_p = Parser(left_t)
+        left_pd = left_p.parse()
+
+        right_t = lexer(right)
+        right_p = Parser(right_t)
+        right_pd = right_p.parse()
+      else:
+        left_pd = "import"
+        right_pd = right.strip()
 
 
-    prepar.append([left_pd, right_pd])
+      prepar.append([left_pd, right_pd])
 
-    l += 1
+      l += 1
+
+    if lib is not None:
+      imports[lib]["tree"] = prepar
 
   while 0 <= numbers[0] < len(prepar):
 
@@ -422,15 +453,14 @@ def run(code):
         case _:
           error(19, f"Source: {source}")
       library = path + ".fly"
-      if library in imports:
-        imported = imports[library]
-      else:
+      if library not in imports:
         try:
           with open(library, "r") as f:
             imported = f.read()
+          imports[library] = { "code": imported }
         except:
           error(17, f"Lib: {library}")
-      run(imported)
+      run(lib = library)
     else:
       inter_l = Interpreter(left, numbers, flags)
       source = inter_l.eval(True)
@@ -446,7 +476,10 @@ def run(code):
         if result is not None:
           if not 0 <= result <= 255:
             error(16)
-        streams[source.reference].write(bytes([result or 0]))
+        b = bytes([result or 0])
+        streams[source.reference].write(b)
+        if 10 in b:
+          streams[source.reference].flush()
       else:
         if result is None:
           result = {}
@@ -456,7 +489,19 @@ def run(code):
 
     numbers[0] += 1
 
+  #try:
+  #  s = []
+  #  for i in objects[3]:
+  #    ss = []
+  #    for j in objects[3][i]:
+  #      ss.append(str(objects[3][i][j] or "."))
+  #    s.append("".join(ss))
+  #  s = "\n" + "\n".join(s)
+  #  print(s)
+  #except (KeyError, TypeError):
+  #  pass
+
   return
 
-run(code)
+run(code = code)
 quit()

@@ -18,6 +18,9 @@ color brightred "PTR"
 #strings
 color cyan ""([^"\]|\\.)*"|""""
 
+#chars
+color cyan "('\\?[^\\]'|'\\\\')"
+
 #trailing whitespace
 color ,green "[ ]+$"
 
