@@ -20,7 +20,7 @@ def error(err, *notices):
    -1: "",
     0: "Lexer: Wrong string, bro",
     1: "Lexer: '@' is not allowed, FBI is already coming",
-    2: "Lexer: You even not assign, wathca want?",
+    2: "",
     3: "Parser: parse() did not come to the end",
     4: "Parser: Brackets not matched",
     5: "Lexer: Wrong numeric, bro",
@@ -39,7 +39,7 @@ def error(err, *notices):
    18: "Interpreter: Tried to get from non-object",
    19: "Import: this sauce is not available",
    20: "Import: need sauce!",
-   21: "Interpreter: Cannot assign to flags!",
+   21: "Interpreter: Cannot assign to this object!",
    22: "Lexer: this not a char  grrrr"
   }
   n = [*notices]
@@ -64,7 +64,7 @@ class Token:
     self.type = t
 
   def __str__(self):
-    return "{}".format(self.value)
+    return f"{self.value}"
 
 def asi(j):
   if not -9_223_372_036_854_775_808 <= j <= 9_223_372_036_854_775_807:
@@ -118,12 +118,17 @@ def lexer(f):
     elif i in "0123456789":
       current += i
     elif i == "=":
-      if current:
+      if current == "<":
+        tokens_.append(current + i)
+        current = ""
+      elif current:
         tokens_.append(current)
+        current = i
+    elif i == "<":
+      tokens_.append(current)
       current = i
     elif i == ">":
-      current += i
-      tokens_.append(current)
+      tokens_.append(current + i)
       current = ""
     elif i in " \t":
       pass
@@ -148,10 +153,11 @@ def lexer(f):
       case "&": t = "STR"
       case "!": t = "FLG"
       case "=>": t = "GET"
+      case "<=": t = "ASS"
       case _:
-        try:
+        if i.isdigit():
           i = int(i)
-        except:
+        else:
           error(5)
         asi(i)
         t = "VAL"
@@ -171,9 +177,17 @@ class Parser:
   def parse(self):
     if self.current.type == "END":
       return None
-    res = self.expr()
+    res = self.assign()
     if self.current.type != "END":
       error(3)
+    return res
+
+  def assign(self):
+    res = self.expr()
+    while self.current.type != "END" and self.current.type == "ASS":
+      token = self.current
+      self.n()
+      res = BinOp(res, token, self.expr())
     return res
 
   def expr(self):
@@ -205,7 +219,7 @@ class Parser:
 
     if token.type == "LBR":
       self.n()
-      res = self.expr()
+      res = self.assign()
       if self.current.type != "RBR":
         error(4)
       self.n()
@@ -216,6 +230,8 @@ class Parser:
     elif token.type in ["NUM", "OBJ", "STN", "STR", "FLG", "SUB", "ADD"]:
       self.n()
       return UnOp(token, self.factor())
+    elif token.type == "END":
+      return
     else:
       error(7)
 
@@ -306,6 +322,29 @@ class Interpreter:
               return self.visit(node.left)[r]
             except:
               error(10, f"Value {r} from {node.left}")
+        case "ASS":
+          source = self.visit(node.left, True)
+          result = self.visit(node.right)
+
+          if source.place == "numbers":
+            result = int(result or 0)
+            self.numbers[source.reference] = result
+          elif source.place == "streams":
+            if result is not None:
+              if not 0 <= result <= 255:
+                error(16)
+            b = bytes([result or 0])
+            streams[source.reference].write(b)
+            if ord("\n") in b:
+              streams[source.reference].flush()
+          else:
+            if result is None:
+              result = { }
+            elif result == "":
+              result = { 0: 0 }
+            source.place[source.reference] = result
+          return result
+
     except:
       error(14, "left: " + str(node.left),
                 "right: " + str(node.right))
@@ -323,7 +362,7 @@ class Interpreter:
           else: return objects[r]
         case "STN":
           r = self.visit(node.right)
-          if ref: return Reference("strings", r)
+          if ref: error(21, "string")
           else: return strings[r]
         case "STR":
           r = self.visit(node.right)
@@ -334,7 +373,7 @@ class Interpreter:
             else: return 0
         case "FLG":
           r = self.visit(node.right)
-          if ref: error(21)
+          if ref: error(21, "flag")
           else: return self.flags[r]
         case "SUB":
           r = self.visit(node.right)
@@ -386,15 +425,11 @@ def run(code = None, lib = None):
       if line[:2] == "::":
         continue
 
-      if "<=" in line:
-        left, right = line.split("<=")
-      elif re.findall(r"!\W*\-?\d", line):
-        flag = int(line.strip()[1:].strip())
+      if re.findall(r"^!\W*\-?\d*$", line):
+        flag = int(line[1:].strip())
         asi(flag)
         flags[flag] = l
         continue
-      else:
-        error(2)
 
       l += 1
 
@@ -407,30 +442,42 @@ def run(code = None, lib = None):
       if line[:2] == "::":
         continue
 
-      if "<=" in line:
-        left, right = line.split("<=")
-      elif re.findall(r"!\W*\-?\d", line):
-        flag = int(line.strip()[1:].strip())
+      if re.findall(r"^!\W*\-?\d*$", line):
+        flag = int(line[1:].strip())
         asi(flag)
         flags[flag] = l
         continue
+      elif re.findall(r"^<=\W*.*$", line):
+        t = "import"
+        r = line.split("<=")[1].strip()
+        if ":" in r:
+          source, path = r.split(":")
+        else:
+          error(20, f"Import statement: {line}")
+        match source:
+          case "lib":
+            path = os.path.join(lib_base, path)
+          case "base":
+            pass
+          case _:
+            error(19, f"Source: {source}")
+        library = path + ".fly"
+        if library not in imports:
+          try:
+            with open(library, "r") as f:
+              imported = f.read()
+            imports[library] = { "code": imported }
+          except:
+            error(17, f"Lib: {library}")
+        code = library
+
       else:
-        error(2)
+        code_l = lexer(line)
+        code_p = Parser(code_l)
+        code = code_p.parse()
+        t = "code"
 
-      if left.strip():
-        left_t = lexer(left)
-        left_p = Parser(left_t)
-        left_pd = left_p.parse()
-
-        right_t = lexer(right)
-        right_p = Parser(right_t)
-        right_pd = right_p.parse()
-      else:
-        left_pd = "import"
-        right_pd = right.strip()
-
-
-      prepar.append([left_pd, right_pd])
+      prepar.append([code, t])
 
       l += 1
 
@@ -439,53 +486,12 @@ def run(code = None, lib = None):
 
   while 0 <= numbers[0] < len(prepar):
 
-    left, right = prepar[numbers[0]]
-    if left == "import":
-      if ":" in right:
-        source, path = right.split(":")
-      else:
-        error(20, f"Import statement: {right}")
-      match source:
-        case "lib":
-          path = os.path.join(lib_base, path)
-        case "base":
-          pass
-        case _:
-          error(19, f"Source: {source}")
-      library = path + ".fly"
-      if library not in imports:
-        try:
-          with open(library, "r") as f:
-            imported = f.read()
-          imports[library] = { "code": imported }
-        except:
-          error(17, f"Lib: {library}")
-      run(lib = library)
+    code, t = prepar[numbers[0]]
+    if t == "import":
+      run(lib = code)
     else:
-      inter_l = Interpreter(left, numbers, flags)
-      source = inter_l.eval(True)
-
-      inter_r = Interpreter(right, numbers, flags)
-      result = inter_r.eval()
-
-      if source.place == "numbers":
-        numbers[source.reference] = int(result or 0)
-      elif source.place == "strings":
-        strings[source.reference] = result or []
-      elif source.place == "streams":
-        if result is not None:
-          if not 0 <= result <= 255:
-            error(16)
-        b = bytes([result or 0])
-        streams[source.reference].write(b)
-        if 10 in b:
-          streams[source.reference].flush()
-      else:
-        if result is None:
-          result = {}
-        elif result == "":
-          result = { 0: 0 }
-        source.place[source.reference] = result
+      inter = Interpreter(code, numbers, flags)
+      inter.eval()
 
     numbers[0] += 1
 
