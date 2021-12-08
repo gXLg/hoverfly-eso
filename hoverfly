@@ -1,509 +1,549 @@
 #!/usr/bin/python3.10
 
 from sys import argv
+
 try:
-  file = argv[1]
-  with open(file, "r") as f:
-    code = f.read()
+    file = argv[1]
+    with open(file, "r") as f:
+        code = f.read()
 except:
-  print("[Error] Hoverfly: File not found")
-  quit()
+    print("[Error] Hoverfly: File not found")
+    quit()
 
 import os
+
 base = os.path.dirname(__file__)
 lib_base = os.path.join(base, "lib")
 
 import re
 
-def error(err, *notices):
-  d = {
-   -1: "",
-    0: "Lexer: Wrong string, bro",
-    1: "Lexer: '@' is not allowed, FBI is already coming",
-    2: "Lexer: You even not assign, wathca want?",
-    3: "Parser: parse() did not come to the end",
-    4: "Parser: Brackets not matched",
-    5: "Lexer: Wrong numeric, bro",
-    6: "Value: The value is not an integer, bro",
-    7: "Parser: factor() received invalid tokens and did not like it",
-    8: "Interpreter: Invalid node visitor",
-    9: "Interpreter: Universe destroyal OwO",
-   10: "Interpreter: Object doesn't own this value",
-   11: "Interpreter: Asked for reference from unary number operator but got bullied",
-   12: "Interpreter: You referenced, what even wasn't there",
-   13: "Interpreter: Wtf is this? This node doesn't even have a value",
-   14: "Interpreter: Binary operation failed, now you are gay",
-   15: "Lexer: Invalid token, rofl",
-   16: "Value: Not a byte, bro",
-   17: "Import: File not found",
-   18: "Interpreter: Tried to get from non-object",
-   19: "Import: this sauce is not available",
-   20: "Import: need sauce!",
-   21: "Interpreter: Cannot assign to flags!",
-   22: "Lexer: this not a char  grrrr"
-  }
-  n = [*notices]
-  n = [f"[Notice] {i}" for i in n]
-  t = [f"[Error] {d[err]}"]
-  t += n
-  t = "\n".join(t)
-  quit(err, t)
 
-def quit(code = 0, error = None):
-  for s in streams:
-    streams[s].flush()
-    if s > 2:
-      streams[s].close()
-  if error:
-    print(error)
-  exit(code)
+def error(err, *notices):
+    d = {
+        -1: "",
+        0: "Lexer: Wrong string, bro",
+        1: "Lexer: '@' is not allowed, FBI is already coming",
+        2: "Lexer: You even not assign, wathca want?",
+        3: "Parser: parse() did not come to the end",
+        4: "Parser: Brackets not matched",
+        5: "Lexer: Wrong numeric, bro",
+        6: "Value: The value is not an integer, bro",
+        7: "Parser: factor() received invalid tokens and did not like it",
+        8: "Interpreter: Invalid node visitor",
+        9: "Interpreter: Universe destroyal OwO",
+        10: "Interpreter: Object doesn't own this value",
+        11: "Interpreter: Asked for reference from unary number operator but got bullied",
+        12: "Interpreter: You referenced, what even wasn't there",
+        13: "Interpreter: Wtf is this? This node doesn't even have a value",
+        14: "Interpreter: Binary operation failed, now you are gay",
+        15: "Lexer: Invalid token, rofl",
+        16: "Value: Not a byte, bro",
+        17: "Import: File not found",
+        18: "Interpreter: Tried to get from non-object",
+        19: "Import: this sauce is not available",
+        20: "Import: need sauce!",
+        21: "Interpreter: Cannot assign to flags!",
+        22: "Lexer: this not a char  grrrr",
+    }
+    n = [*notices]
+    n = [f"[Notice] {i}" for i in n]
+    t = [f"[Error] {d[err]}"]
+    t += n
+    t = "\n".join(t)
+    quit(err, t)
+
+
+def quit(code=0, error=None):
+    for s in streams:
+        streams[s].flush()
+        if s > 2:
+            streams[s].close()
+    if error:
+        print(error)
+    exit(code)
+
 
 class Token:
-  def __init__(self, value, t):
-    self.value = value
-    self.type = t
+    def __init__(self, value, t):
+        self.value = value
+        self.type = t
 
-  def __str__(self):
-    return "{}".format(self.value)
+    def __str__(self):
+        return "{}".format(self.value)
+
 
 def asi(j):
-  if not -9_223_372_036_854_775_808 <= j <= 9_223_372_036_854_775_807:
-    error(6)
+    if not -9_223_372_036_854_775_808 <= j <= 9_223_372_036_854_775_807:
+        error(6)
+
 
 def lexer(f):
-  d = f
-  replace = {
-    "\\e": "\e",
-    "\\n": "\n",
-    "\\t": "\t",
-    "\\'": "'",
-    "\\\"": "\"",
-    "\\\\": "\\",
-    "\\b": "\b"
-  }
-  for s in re.findall(r'''(?x)(?<!\\)".*?(?<!\\)"''', f):
-    c = 0
-    for a in strings: c += 1
-    try:
-      e = s[1:-1]
-      for search in replace:
-        e = e.replace(search, replace[search])
-    except:
-      error(0)
-    st = [*bytes(e, "utf8")]
-    st.append(0)
-    string = {}
-    for a, b in enumerate(st):
-      string[a] = b
-    strings[c] = string
-    f = f.replace(s, f"@{c}", 1)
-    d = d.replace(s, "", 1)
-  if "@" in d:
-    error(1)
-  for c in re.findall(r"""('\\?[^\\]'|'\\\\')""", f):
-    ch = c[1:-1]
-    if ch in replace:
-      ch = replace[ch]
-    if len(ch) > 1:
-      error(22, f"Char: {c}")
-    f = f.replace(c, str(ord(ch)))
-  current = ""
-  tokens_ = []
-  for i in f:
-    if i in "+-*/()@#^&!":
-      if current:
-        tokens_.append(current)
-        current = ""
-      tokens_.append(i)
-    elif i in "0123456789":
-      current += i
-    elif i == "=":
-      if current:
-        tokens_.append(current)
-      current = i
-    elif i == ">":
-      current += i
-      tokens_.append(current)
-      current = ""
-    elif i in " \t":
-      pass
-    else:
-      error(15, f"Token: {i}")
-
-  if current:
-    tokens_.append(current)
-
-  tokens = []
-  for i in tokens_:
-    match i:
-      case "(": t = "LBR"
-      case ")": t = "RBR"
-      case "+": t = "ADD"
-      case "-": t = "SUB"
-      case "*": t = "MUL"
-      case "/": t = "DIV"
-      case "@": t = "STN"
-      case "#": t = "NUM"
-      case "^": t = "OBJ"
-      case "&": t = "STR"
-      case "!": t = "FLG"
-      case "=>": t = "GET"
-      case _:
+    d = f
+    replace = {
+        "\\e": "\e",
+        "\\n": "\n",
+        "\\t": "\t",
+        "\\'": "'",
+        '\\"': '"',
+        "\\\\": "\\",
+        "\\b": "\b",
+    }
+    for s in re.findall(r'''(?x)(?<!\\)".*?(?<!\\)"''', f):
+        c = 0
+        for a in strings:
+            c += 1
         try:
-          i = int(i)
+            e = s[1:-1]
+            for search in replace:
+                e = e.replace(search, replace[search])
         except:
-          error(5)
-        asi(i)
-        t = "VAL"
-    tokens.append(Token(i, t))
-  tokens.append(Token(None, "END"))
-  return tokens
+            error(0)
+        st = [*bytes(e, "utf8")]
+        st.append(0)
+        string = {}
+        for a, b in enumerate(st):
+            string[a] = b
+        strings[c] = string
+        f = f.replace(s, f"@{c}", 1)
+        d = d.replace(s, "", 1)
+    if "@" in d:
+        error(1)
+    for c in re.findall(r"""('\\?[^\\]'|'\\\\')""", f):
+        ch = c[1:-1]
+        if ch in replace:
+            ch = replace[ch]
+        if len(ch) > 1:
+            error(22, f"Char: {c}")
+        f = f.replace(c, str(ord(ch)))
+    current = ""
+    tokens_ = []
+    for i in f:
+        if i in "+-*/()@#^&!":
+            if current:
+                tokens_.append(current)
+                current = ""
+            tokens_.append(i)
+        elif i in "0123456789":
+            current += i
+        elif i == "=":
+            if current:
+                tokens_.append(current)
+            current = i
+        elif i == ">":
+            current += i
+            tokens_.append(current)
+            current = ""
+        elif i in " \t":
+            pass
+        else:
+            error(15, f"Token: {i}")
+
+    if current:
+        tokens_.append(current)
+
+    tokens = []
+    for i in tokens_:
+        match i:
+            case "(":
+                t = "LBR"
+            case ")":
+                t = "RBR"
+            case "+":
+                t = "ADD"
+            case "-":
+                t = "SUB"
+            case "*":
+                t = "MUL"
+            case "/":
+                t = "DIV"
+            case "@":
+                t = "STN"
+            case "#":
+                t = "NUM"
+            case "^":
+                t = "OBJ"
+            case "&":
+                t = "STR"
+            case "!":
+                t = "FLG"
+            case "=>":
+                t = "GET"
+            case _:
+                try:
+                    i = int(i)
+                except:
+                    error(5)
+                asi(i)
+                t = "VAL"
+        tokens.append(Token(i, t))
+    tokens.append(Token(None, "END"))
+    return tokens
+
 
 class Parser:
-  def __init__(self, tokens):
-    self.current = None
-    self.tokens = tokens
-    self.n()
+    def __init__(self, tokens):
+        self.current = None
+        self.tokens = tokens
+        self.n()
 
-  def n(self):
-    self.current = self.tokens.pop(0)
+    def n(self):
+        self.current = self.tokens.pop(0)
 
-  def parse(self):
-    if self.current.type == "END":
-      return None
-    res = self.expr()
-    if self.current.type != "END":
-      error(3)
-    return res
+    def parse(self):
+        if self.current.type == "END":
+            return None
+        res = self.expr()
+        if self.current.type != "END":
+            error(3)
+        return res
 
-  def expr(self):
-    res = self.term()
-    while self.current.type != "END" and self.current.type in ["ADD", "SUB"]:
-      token = self.current
-      self.n()
-      res = BinOp(res, token, self.term())
-    return res
+    def expr(self):
+        res = self.term()
+        while self.current.type != "END" and self.current.type in ["ADD", "SUB"]:
+            token = self.current
+            self.n()
+            res = BinOp(res, token, self.term())
+        return res
 
-  def term(self):
-    res = self.getter()
-    while self.current.type != "END" and self.current.type in ["MUL", "DIV"]:
-      token = self.current
-      self.n()
-      res = BinOp(res, token, self.getter())
-    return res
+    def term(self):
+        res = self.getter()
+        while self.current.type != "END" and self.current.type in ["MUL", "DIV"]:
+            token = self.current
+            self.n()
+            res = BinOp(res, token, self.getter())
+        return res
 
-  def getter(self):
-    res = self.factor()
-    while self.current.type != "END" and self.current.type == "GET":
-      token = self.current
-      self.n()
-      res = BinOp(res, token, self.factor())
-    return res
+    def getter(self):
+        res = self.factor()
+        while self.current.type != "END" and self.current.type == "GET":
+            token = self.current
+            self.n()
+            res = BinOp(res, token, self.factor())
+        return res
 
-  def factor(self):
-    token = self.current
+    def factor(self):
+        token = self.current
 
-    if token.type == "LBR":
-      self.n()
-      res = self.expr()
-      if self.current.type != "RBR":
-        error(4)
-      self.n()
-      return res
-    elif token.type == "VAL":
-      self.n()
-      return Val(token)
-    elif token.type in ["NUM", "OBJ", "STN", "STR", "FLG", "SUB", "ADD"]:
-      self.n()
-      return UnOp(token, self.factor())
-    else:
-      error(7)
+        if token.type == "LBR":
+            self.n()
+            res = self.expr()
+            if self.current.type != "RBR":
+                error(4)
+            self.n()
+            return res
+        elif token.type == "VAL":
+            self.n()
+            return Val(token)
+        elif token.type in ["NUM", "OBJ", "STN", "STR", "FLG", "SUB", "ADD"]:
+            self.n()
+            return UnOp(token, self.factor())
+        else:
+            error(7)
+
 
 class Reference:
-  def __init__(self, place, reference):
-    self.place = place
-    self.reference = reference
+    def __init__(self, place, reference):
+        self.place = place
+        self.reference = reference
 
-  def __str__(self):
-    return "{}[{}]".format(self.place, self.reference)
+    def __str__(self):
+        return "{}[{}]".format(self.place, self.reference)
+
 
 class BinOp:
-  def __init__(self, left, token, right):
-    self.left = left
-    self.token = token
-    self.right = right
+    def __init__(self, left, token, right):
+        self.left = left
+        self.token = token
+        self.right = right
 
-  def __str__(self):
-    return "({}{}{})".format(self.left, self.token, self.right)
+    def __str__(self):
+        return "({}{}{})".format(self.left, self.token, self.right)
+
 
 class UnOp:
-  def __init__(self, token, right):
-    self.token = token
-    self.right = right
+    def __init__(self, token, right):
+        self.token = token
+        self.right = right
 
-  def __str__(self):
-    return "({}{})".format(self.token, self.right)
+    def __str__(self):
+        return "({}{})".format(self.token, self.right)
+
 
 class Val:
-  def __init__(self, token):
-    self.token = token
-    self.value = token.value
+    def __init__(self, token):
+        self.token = token
+        self.value = token.value
 
-  def __str__(self):
-    return str(self.token)
+    def __str__(self):
+        return str(self.token)
+
 
 class Interpreter:
-  def __init__(self, node, numbers, flags):
-    self.root = node
-    self.numbers = numbers
-    self.flags = flags
+    def __init__(self, node, numbers, flags):
+        self.root = node
+        self.numbers = numbers
+        self.flags = flags
 
-  def eval(self, ref = False):
-    return self.visit(self.root, ref)
+    def eval(self, ref=False):
+        return self.visit(self.root, ref)
 
-  def visit(self, node, ref = False):
-    if not node: return None
-    name = "visit" + type(node).__name__
-    visiting = getattr(self, name, self.ex)
-    return visiting(node, ref)
+    def visit(self, node, ref=False):
+        if not node:
+            return None
+        name = "visit" + type(node).__name__
+        visiting = getattr(self, name, self.ex)
+        return visiting(node, ref)
 
-  def ex(self, node, ref):
-    error(8, f"Node: {type(node).__name__}")
+    def ex(self, node, ref):
+        error(8, f"Node: {type(node).__name__}")
 
-  def visitBinOp(self, node, ref):
-    try:
-      match node.token.type:
-        case "ADD":
-          j = self.visit(node.left) + self.visit(node.right)
-          asi(j)
-          return j
-        case "SUB":
-          j = self.visit(node.left) - self.visit(node.right)
-          asi(j)
-          return j
-        case "MUL":
-          j = self.visit(node.left) * self.visit(node.right)
-          asi(j)
-          return j
-        case "DIV":
-          l, r = self.visit(node.left), self.visit(node.right)
-          if l == r == 0:
-            return 0
-          elif r == 0:
-            error(9)
-          j = l / r
-          j = int(j)
-          asi(j)
-          return j
-        case "GET":
-          if node.left.token.type not in ["OBJ", "GET", "STN"]:
-            error(18)
-          if ref:
-            return Reference(self.visit(node.left), self.visit(node.right))
-          else:
-            try:
-              r = self.visit(node.right)
-              return self.visit(node.left)[r]
-            except:
-              error(10, f"Value {r} from {node.left}")
-    except:
-      error(14, "left: " + str(node.left),
-                "right: " + str(node.right))
-
-  def visitUnOp(self, node, ref):
-    try:
-      match node.token.type:
-        case "NUM":
-          r = self.visit(node.right)
-          if ref: return Reference("numbers", r)
-          else: return self.numbers[r]
-        case "OBJ":
-          r = self.visit(node.right)
-          if ref: return Reference(objects, r)
-          else: return objects[r]
-        case "STN":
-          r = self.visit(node.right)
-          if ref: return Reference("strings", r)
-          else: return strings[r]
-        case "STR":
-          r = self.visit(node.right)
-          if ref: return Reference("streams", r)
-          else:
-            c = streams[r].read(1)
-            if c: return ord(c)
-            else: return 0
-        case "FLG":
-          r = self.visit(node.right)
-          if ref: error(21)
-          else: return self.flags[r]
-        case "SUB":
-          r = self.visit(node.right)
-          if ref: error(11)
-          else: return(- r)
-        case "ADD":
-          r = self.visit(node.right)
-          if ref: error(11)
-          else: return r
-    except:
-      error(12, f"Reference: {node}")
-
-  def visitVal(self, node, ref):
-    try:
-      return node.value
-    except:
-      error(13)
-
-objects = { }
-streams = { 0: open(0, "rb"),
-            1: open(1, "wb"),
-            2: open(2, "wb")}
-strings = { }
-imports = { }
-
-def run(code = None, lib = None):
-
-  numbers = { 0: 0 }
-  flags = { 0: -2 }
-
-  prepar = []
-  if lib is not None:
-    if lib in imports:
-      code = imports[lib]["code"]
-      if "tree" in imports[lib]:
-        prepar = imports[lib]["tree"]
-
-  if code.strip() == "&?":
-    for s in streams:
-      print(s, streams[s])
-    quit()
-
-  if prepar:
-    code = [c for c in code.split("\n")]
-    code = [c.strip() for c in code if c.strip()]
-    l = -1
-    for line in code:
-
-      if line[:2] == "::":
-        continue
-
-      if "<=" in line:
-        left, right = line.split("<=")
-      elif re.findall(r"!\W*\-?\d", line):
-        flag = int(line.strip()[1:].strip())
-        asi(flag)
-        flags[flag] = l
-        continue
-      else:
-        error(2)
-
-      l += 1
-
-  else:
-    code = [c for c in code.split("\n")]
-    code = [c.strip() for c in code if c.strip()]
-    l = -1
-    for line in code:
-
-      if line[:2] == "::":
-        continue
-
-      if "<=" in line:
-        left, right = line.split("<=")
-      elif re.findall(r"!\W*\-?\d", line):
-        flag = int(line.strip()[1:].strip())
-        asi(flag)
-        flags[flag] = l
-        continue
-      else:
-        error(2)
-
-      if left.strip():
-        left_t = lexer(left)
-        left_p = Parser(left_t)
-        left_pd = left_p.parse()
-
-        right_t = lexer(right)
-        right_p = Parser(right_t)
-        right_pd = right_p.parse()
-      else:
-        left_pd = "import"
-        right_pd = right.strip()
-
-
-      prepar.append([left_pd, right_pd])
-
-      l += 1
-
-    if lib is not None:
-      imports[lib]["tree"] = prepar
-
-  while 0 <= numbers[0] < len(prepar):
-
-    left, right = prepar[numbers[0]]
-    if left == "import":
-      if ":" in right:
-        source, path = right.split(":")
-      else:
-        error(20, f"Import statement: {right}")
-      match source:
-        case "lib":
-          path = os.path.join(lib_base, path)
-        case "base":
-          pass
-        case _:
-          error(19, f"Source: {source}")
-      library = path + ".fly"
-      if library not in imports:
+    def visitBinOp(self, node, ref):
         try:
-          with open(library, "r") as f:
-            imported = f.read()
-          imports[library] = { "code": imported }
+            match node.token.type:
+                case "ADD":
+                    j = self.visit(node.left) + self.visit(node.right)
+                    asi(j)
+                    return j
+                case "SUB":
+                    j = self.visit(node.left) - self.visit(node.right)
+                    asi(j)
+                    return j
+                case "MUL":
+                    j = self.visit(node.left) * self.visit(node.right)
+                    asi(j)
+                    return j
+                case "DIV":
+                    l, r = self.visit(node.left), self.visit(node.right)
+                    if l == r == 0:
+                        return 0
+                    elif r == 0:
+                        error(9)
+                    j = l / r
+                    j = int(j)
+                    asi(j)
+                    return j
+                case "GET":
+                    if node.left.token.type not in ["OBJ", "GET", "STN"]:
+                        error(18)
+                    if ref:
+                        return Reference(self.visit(node.left), self.visit(node.right))
+                    else:
+                        try:
+                            r = self.visit(node.right)
+                            return self.visit(node.left)[r]
+                        except:
+                            error(10, f"Value {r} from {node.left}")
         except:
-          error(17, f"Lib: {library}")
-      run(lib = library)
+            error(14, "left: " + str(node.left), "right: " + str(node.right))
+
+    def visitUnOp(self, node, ref):
+        try:
+            match node.token.type:
+                case "NUM":
+                    r = self.visit(node.right)
+                    if ref:
+                        return Reference("numbers", r)
+                    else:
+                        return self.numbers[r]
+                case "OBJ":
+                    r = self.visit(node.right)
+                    if ref:
+                        return Reference(objects, r)
+                    else:
+                        return objects[r]
+                case "STN":
+                    r = self.visit(node.right)
+                    if ref:
+                        return Reference("strings", r)
+                    else:
+                        return strings[r]
+                case "STR":
+                    r = self.visit(node.right)
+                    if ref:
+                        return Reference("streams", r)
+                    else:
+                        c = streams[r].read(1)
+                        if c:
+                            return ord(c)
+                        else:
+                            return 0
+                case "FLG":
+                    r = self.visit(node.right)
+                    if ref:
+                        error(21)
+                    else:
+                        return self.flags[r]
+                case "SUB":
+                    r = self.visit(node.right)
+                    if ref:
+                        error(11)
+                    else:
+                        return -r
+                case "ADD":
+                    r = self.visit(node.right)
+                    if ref:
+                        error(11)
+                    else:
+                        return r
+        except:
+            error(12, f"Reference: {node}")
+
+    def visitVal(self, node, ref):
+        try:
+            return node.value
+        except:
+            error(13)
+
+
+objects = {}
+streams = {0: open(0, "rb"), 1: open(1, "wb"), 2: open(2, "wb")}
+strings = {}
+imports = {}
+
+
+def run(code=None, lib=None):
+
+    numbers = {0: 0}
+    flags = {0: -2}
+
+    prepar = []
+    if lib is not None:
+        if lib in imports:
+            code = imports[lib]["code"]
+            if "tree" in imports[lib]:
+                prepar = imports[lib]["tree"]
+
+    if code.strip() == "&?":
+        for s in streams:
+            print(s, streams[s])
+        quit()
+
+    if prepar:
+        code = [c for c in code.split("\n")]
+        code = [c.strip() for c in code if c.strip()]
+        l = -1
+        for line in code:
+
+            if line[:2] == "::":
+                continue
+
+            if "<=" in line:
+                left, right = line.split("<=")
+            elif re.findall(r"!\W*\-?\d", line):
+                flag = int(line.strip()[1:].strip())
+                asi(flag)
+                flags[flag] = l
+                continue
+            else:
+                error(2)
+
+            l += 1
+
     else:
-      inter_l = Interpreter(left, numbers, flags)
-      source = inter_l.eval(True)
+        code = [c for c in code.split("\n")]
+        code = [c.strip() for c in code if c.strip()]
+        l = -1
+        for line in code:
 
-      inter_r = Interpreter(right, numbers, flags)
-      result = inter_r.eval()
+            if line[:2] == "::":
+                continue
 
-      if source.place == "numbers":
-        numbers[source.reference] = int(result or 0)
-      elif source.place == "strings":
-        strings[source.reference] = result or []
-      elif source.place == "streams":
-        if result is not None:
-          if not 0 <= result <= 255:
-            error(16)
-        b = bytes([result or 0])
-        streams[source.reference].write(b)
-        if 10 in b:
-          streams[source.reference].flush()
-      else:
-        if result is None:
-          result = {}
-        elif result == "":
-          result = { 0: 0 }
-        source.place[source.reference] = result
+            if "<=" in line:
+                left, right = line.split("<=")
+            elif re.findall(r"!\W*\-?\d", line):
+                flag = int(line.strip()[1:].strip())
+                asi(flag)
+                flags[flag] = l
+                continue
+            else:
+                error(2)
 
-    numbers[0] += 1
+            if left.strip():
+                left_t = lexer(left)
+                left_p = Parser(left_t)
+                left_pd = left_p.parse()
 
-  #try:
-  #  s = []
-  #  for i in objects[3]:
-  #    ss = []
-  #    for j in objects[3][i]:
-  #      ss.append(str(objects[3][i][j] or "."))
-  #    s.append("".join(ss))
-  #  s = "\n" + "\n".join(s)
-  #  print(s)
-  #except (KeyError, TypeError):
-  #  pass
-  #print(objects[2] if 2 in objects else None)
+                right_t = lexer(right)
+                right_p = Parser(right_t)
+                right_pd = right_p.parse()
+            else:
+                left_pd = "import"
+                right_pd = right.strip()
+
+            prepar.append([left_pd, right_pd])
+
+            l += 1
+
+        if lib is not None:
+            imports[lib]["tree"] = prepar
+
+    while 0 <= numbers[0] < len(prepar):
+
+        left, right = prepar[numbers[0]]
+        if left == "import":
+            if ":" in right:
+                source, path = right.split(":")
+            else:
+                error(20, f"Import statement: {right}")
+            match source:
+                case "lib":
+                    path = os.path.join(lib_base, path)
+                case "base":
+                    pass
+                case _:
+                    error(19, f"Source: {source}")
+            library = path + ".fly"
+            if library not in imports:
+                try:
+                    with open(library, "r") as f:
+                        imported = f.read()
+                    imports[library] = {"code": imported}
+                except:
+                    error(17, f"Lib: {library}")
+            run(lib=library)
+        else:
+            inter_l = Interpreter(left, numbers, flags)
+            source = inter_l.eval(True)
+
+            inter_r = Interpreter(right, numbers, flags)
+            result = inter_r.eval()
+
+            if source.place == "numbers":
+                numbers[source.reference] = int(result or 0)
+            elif source.place == "strings":
+                strings[source.reference] = result or []
+            elif source.place == "streams":
+                if result is not None:
+                    if not 0 <= result <= 255:
+                        error(16)
+                b = bytes([result or 0])
+                streams[source.reference].write(b)
+                if 10 in b:
+                    streams[source.reference].flush()
+            else:
+                if result is None:
+                    result = {}
+                elif result == "":
+                    result = {0: 0}
+                source.place[source.reference] = result
+
+        numbers[0] += 1
+
+    # try:
+    #  s = []
+    #  for i in objects[3]:
+    #    ss = []
+    #    for j in objects[3][i]:
+    #      ss.append(str(objects[3][i][j] or "."))
+    #    s.append("".join(ss))
+    #  s = "\n" + "\n".join(s)
+    #  print(s)
+    # except (KeyError, TypeError):
+    #  pass
+    # print(objects[2] if 2 in objects else None)
+
+    return
 
 
-  return
-
-run(code = code)
+run(code=code)
 quit()
