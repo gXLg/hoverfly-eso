@@ -124,6 +124,8 @@ def lexer(f):
       elif current:
         tokens_.append(current)
         current = i
+      else:
+        current = i
     elif i == "<":
       if current:
         tokens_.append(current)
@@ -507,7 +509,7 @@ def run(code = None, lib = None):
   #  print(s)
   #except (KeyError, TypeError):
   #  pass
-  #print(objects[9] if 9 in objects else None)
+  #print(objects[1] if 1 in objects else None)
 
 
   return
