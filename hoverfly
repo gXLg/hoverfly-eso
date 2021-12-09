@@ -125,7 +125,8 @@ def lexer(f):
         tokens_.append(current)
         current = i
     elif i == "<":
-      tokens_.append(current)
+      if current:
+        tokens_.append(current)
       current = i
     elif i == ">":
       tokens_.append(current + i)
@@ -158,7 +159,7 @@ def lexer(f):
         if i.isdigit():
           i = int(i)
         else:
-          error(5)
+          error(5, f"Token: {i}")
         asi(i)
         t = "VAL"
     tokens.append(Token(i, t))
@@ -506,7 +507,7 @@ def run(code = None, lib = None):
   #  print(s)
   #except (KeyError, TypeError):
   #  pass
-  #print(objects[2] if 2 in objects else None)
+  #print(objects[9] if 9 in objects else None)
 
 
   return
