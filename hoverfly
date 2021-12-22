@@ -498,20 +498,6 @@ def run(code = None, lib = None):
 
     numbers[0] += 1
 
-  #try:
-  #  s = []
-  #  for i in objects[3]:
-  #    ss = []
-  #    for j in objects[3][i]:
-  #      ss.append(str(objects[3][i][j] or "."))
-  #    s.append("".join(ss))
-  #  s = "\n" + "\n".join(s)
-  #  print(s)
-  #except (KeyError, TypeError):
-  #  pass
-  #print(objects[1] if 1 in objects else None)
-
-
   return
 
 run(code = code)
