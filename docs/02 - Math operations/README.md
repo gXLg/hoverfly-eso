@@ -44,17 +44,16 @@ Often seen: `^69 <=`
 ### Object properties
 Initialization of an object property will always create an empty object.
 To assign a number, a value has to be used in the right side.
-Example: ```
-:: create empty object ^1 using initialization
-^1 <=
-
-:: create number property and assign value
-^1 => 1 <= 69
-
-:: create object property using initialization
-^1 => 2 <=
-
-:: assign value to a new property of it
-^1 => 2 => 3 <= 5
-```
+Example:
+  :: create empty object ^1 using initialization
+  ^1 <=
+  
+  :: create number property and assign value
+  ^1 => 1 <= 69
+  
+  :: create object property using initialization
+  ^1 => 2 <=
+  
+  :: assign value to a new property of it
+  ^1 => 2 => 3 <= 5
 
