@@ -35,7 +35,8 @@ The interpreting of hoverfly code is run in several steps:
 2) Empty lines or comments get removed
 3) Each line gets lexed and parsed
 4) Line after line, code gets executed
-This aprocah has some advantages: syntax errors occure
+
+This aproach has some advantages: syntax errors occure
 before some operations are made, code easily gets interpreted
 multiple times on branching.
 
