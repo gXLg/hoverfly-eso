@@ -25,26 +25,30 @@ To assign a value the ass-operator `<=` is used.
 On the **right side** is the value to be assigned or nothing,
 on the **left side** is the variable reference.
 The assigning process works different for different types of variables.
-We speak of initialization if the right side is empty.
+We speak of **initialization** if the right side is empty.
+You can **always** assign or initialize a variable, even if it is
+already created, except for flags.
 
 ### Numbers
 Assigning to numbers is the easiest. On initialization,
-variable gets assgined `0`. Else, the value is used. Example:
-`#1 <= 5 + 2` will result in `#1 == 7`,
+variable gets assgined `0`. Else, the **value** is used.
+Example: `#1 <= 5 + 2` will result in `#1 == 7`,
 `#2 <=` will result in `#2 == 0`
 
 ### Objects
-Assigning to pure object is not directly possible, except
-the right hand produces an object as result. What often
-is used, is objeft initialization. It creates an empty object
-without properties. Assinging numeric value to an object is
-technically possible, but will result in unexpected behaviour.
-Often seen: `^69 <=`
+Assigning to pure object is **not directly possible**,
+except the right hand produces an object as result.
+What often is used, is **object initialization**.
+It creates an **empty** object without properties.
+Assinging numeric value to an object is technically
+possible, but will result in unexpected behaviour.
+Initialization of already created object is used to
+clear the object. Often seen: `^69 <=`
 
 ### Object properties
-Initialization of an object property will always create an empty object.
-To assign a number, a value has to be used in the right side.
-Example:
+**Initialization** of an object property will always create
+an empty object. To assign a number, a **value** has to be used
+in the right side. Example:
 ```
 :: create empty object ^1 using initialization
 ^1 <=
@@ -59,3 +63,32 @@ Example:
 ^1 => 2 => 3 <= 5
 ```
 
+### Streams
+The ass-operator is used to **write** to streams. The right
+side must produce a **byte** value, this value will then
+be written to the stream. Initialization produces a `0`.
+Creating new streams is currently **not possible**. Writing to
+stream which is opened for reading, will produce an error.
+
+### Flags
+Flags are **constant** and can't be assigned or initialized with
+the ass-operator. They are used for jumping, which will be
+explained in '04 - Basic control flow'.
+
+### Empty left side
+This situation tells the interpreter that it's an **import statement**.
+More about imports will be talked in '07' and '08'.
+
+## Operation order
+The mathematical elements of hoverfly syntax create an order
+in which expressions are evaluated.
+1) Expressions in brackets `(`, `)`
+2) Unary `+`, `-`
+3) Variable unary `#`, `^`, `&`, `!`, `@`
+4) Get-operator `=>`
+5) First order binary `*`, `/`
+6) Second order binary `+`, `-`
+7) Ass-operator `<=`
+
+## Advanced operations
+...

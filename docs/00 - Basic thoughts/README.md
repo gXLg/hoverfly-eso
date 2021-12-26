@@ -30,6 +30,15 @@ aren't called with names but with **numbers**. That allows
 a tricky system of dynamic variable references and
 complex mathematical expressions.
 
+The interpreting of hoverfly code is run in several steps:
+1) Code gets splitted into lines
+2) Empty lines or comments get removed
+3) Each line gets lexed and parsed
+4) Line after line, code gets executed
+This aprocah has some advantages: syntax errors occure
+before some operations are made, code easily gets interpreted
+multiple times on branching.
+
 In the process of learning hoverfly you will be
 surprised by the simplicity and in the same time
 complexity of it. Good luck learning hoverfly

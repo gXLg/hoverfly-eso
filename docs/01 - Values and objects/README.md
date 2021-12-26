@@ -42,6 +42,11 @@ For example the string `"bebra"` has properties `0`, `1`, `2`,
 `3`, `4` and `5` for `'b'`, `'e'`, `'b'`, `'r'`, `'a'` and
 the null terminator respectively.
 
+## Streams
+Using stream in a mathematical expression **reads** one byte
+from the stream. Reading from stream which is open for writing,
+will produce an error.
+
 ## References
 Referencing uncreated variables or not assigned object properties
 will result in an interpreter error.
