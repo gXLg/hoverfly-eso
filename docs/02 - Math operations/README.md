@@ -37,7 +37,8 @@ Example: `#1 <= 5 + 2` will result in `#1 == 7`,
 
 ### Objects
 Assigning to pure object is **not directly possible**,
-except the right hand produces an object as result.
+except the right side produces an object as result.
+An example for the right side object is a string.
 What often is used, is **object initialization**.
 It creates an **empty** object without properties.
 Assinging numeric value to an object is technically
@@ -91,4 +92,71 @@ in which expressions are evaluated.
 7) Ass-operator `<=`
 
 ## Advanced operations
-...
+Combining integer division, anomaly and your brain,
+you can represent multiple advanced oparations using
+native syntax of hoverfly. `(N)` - means "for natural numbers"
+
+### Modulo (N)
+This one is easy. No explanation needed.
+```
+:: a = 56
+#1 <= 56
+
+:: b = 3
+#2 <= 3
+
+:: c = a % b
+#3 <= #1 - #1 / #2 * #1
+```
+
+### Equality
+If two numbers are the same, their difference will be `0`.
+Division of a number by itself will always produce `1`,
+except in anomaly, it produces `0`.
+```
+:: a = 45
+#1 <= 45
+
+:: b = 45
+#2 <= 45
+
+:: c = int(a == b)
+#3 <= 1 - (#1 - #2) / (#1 - #2)
+```
+
+### Greater or equal (N)
+If a number is greater or equal, it will be at least `1` after
+dividing by the other number.
+```
+:: a = 37
+#1 <= 37
+
+:: b = 98
+#2 <= 98
+
+:: c = (a >= b)
+#3 <= (#1 / #2) / (#1 / #2)
+```
+
+### >= 0
+A square of a number is always positive. Adding the number
+and its square will provide a smaller number, if the
+original number was negative.
+```
+:: a = -3
+#1 <= -3
+
+:: b = a * a
+#2 <= #1 * #1
+
+:: c = b + a
+#3 <= #1 + #2
+
+:: d = (a >= 0)
+#4 <= (#3 / #2) / (#3 / #2)
+```
+
+### Other
+Many other **crazy** things can be implemented,
+using only these ideas. Learn, explore, widen
+your mind and become a **mad scientist**!
