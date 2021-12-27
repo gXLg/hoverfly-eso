@@ -15,7 +15,7 @@ In practice, I created a very easy abstract syntax...
 and I liked it. That's why there is only one
 version of hoverfly, and yet an **esoteric** one.
 
-I named it hoverfly, because there exists an inscet called
+I named it hoverfly, because there exists an insect called
 with that name. It mimics a bee to not be eaten or attacked.
 This is my beloved insect. The name itself is actually not
 connected to the language, I chose it just because I can.
