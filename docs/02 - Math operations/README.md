@@ -93,7 +93,7 @@ in which expressions are evaluated.
 
 ## Advanced operations
 Combining integer division, anomaly and your brain,
-you can represent multiple advanced oparations using
+you can represent multiple advanced operations using
 native syntax of hoverfly. `(N)` - means "for natural numbers"
 
 ### Modulo (N)
@@ -106,7 +106,7 @@ This one is easy. No explanation needed.
 #2 <= 3
 
 :: c = a % b
-#3 <= #1 - #1 / #2 * #1
+#3 <= #1 - #1 / #2 * #2
 ```
 
 ### Equality
