@@ -21,7 +21,7 @@ and other values. One simple example is
 A **variable** is a **prefixed** value. This is the biggest
 difference between hoverfly and most other languages.
 The variable prefix is handled as a unary operator by the
-interpreter. It can be on of `#`, `^`, `&` and `!` for
+interpreter. It can be one of `#`, `^`, `&` and `!` for
 numbers, objects, streams and flags respectively.
 Internally, hoverfly uses prefix `@` for strings,
 which may not be used in the source code.

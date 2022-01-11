@@ -335,7 +335,7 @@ class Interpreter:
           elif source.place == "streams":
             if result is not None:
               if not 0 <= result <= 255:
-                error(16)
+                error(16, f"Value: {result}")
             b = bytes([result or 0])
             streams[source.reference].write(b)
             if ord("\n") in b:

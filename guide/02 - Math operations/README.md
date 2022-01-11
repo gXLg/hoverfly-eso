@@ -94,7 +94,8 @@ in which expressions are evaluated.
 ## Advanced operations
 Combining integer division, anomaly and your brain,
 you can represent multiple advanced operations using
-native syntax of hoverfly. `(N)` - means "for natural numbers"
+native syntax of hoverfly. `(N)` hereby means
+"for natural numbers (zero excluded)"
 
 ### Modulo (N)
 This one is easy. No explanation needed.
