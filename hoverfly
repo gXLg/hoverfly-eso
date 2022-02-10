@@ -14,49 +14,104 @@ base = os.path.dirname(__file__)
 lib_base = os.path.join(base, "lib")
 
 import re
+from websocket import WebSocket
 
-def error(err, *notices):
-  d = {
-   -1: "",
-    0: "Lexer: Wrong string, bro",
-    1: "Lexer: '@' is not allowed, FBI is already coming",
-    2: "",
-    3: "Parser: parse() did not come to the end",
-    4: "Parser: Brackets not matched",
-    5: "Lexer: Wrong numeric, bro",
-    6: "Value: The value is not an integer, bro",
-    7: "Parser: factor() received invalid tokens and did not like it",
-    8: "Interpreter: Invalid node visitor",
-    9: "Interpreter: Universe destroyal OwO",
-   10: "Interpreter: Object doesn't own this value",
-   11: "Interpreter: Asked for reference from unary number operator but got bullied",
-   12: "Interpreter: You referenced, what even wasn't there",
-   13: "Interpreter: Wtf is this? This node doesn't even have a value",
-   14: "Interpreter: Binary operation failed, now you are gay",
-   15: "Lexer: Invalid token, rofl",
-   16: "Value: Not a byte, bro",
-   17: "Import: File not found",
-   18: "Interpreter: Tried to get from non-object",
-   19: "Import: this sauce is not available",
-   20: "Import: need sauce!",
-   21: "Interpreter: Cannot assign to this object!",
-   22: "Lexer: this not a char  grrrr"
-  }
-  n = [*notices]
-  n = [f"[Notice] {i}" for i in n]
-  t = [f"[Error] {d[err]}"]
-  t += n
-  t = "\n".join(t)
+def handle(err):
+  n = [f"[Notice] {i}" for i in err.notices]
+  t = f"[Error] {err.error}\n"
+  t += "\n".join(n)
   quit(err, t)
+
+class HoverflyError(Exception):
+  def __init__(self, code, *notices):
+    d = {
+     -1: "",
+      0: "Lexer: Wrong string, bro",
+      1: "Lexer: '@' is not allowed, FBI is already coming",
+      2: "",
+      3: "Parser: parse() did not come to the end",
+      4: "Parser: Brackets not matched",
+      5: "Lexer: Wrong numeric, bro",
+      6: "Value: The value is not an integer, bro",
+      7: "Parser: factor() received invalid tokens and did not like it",
+      8: "Interpreter: Invalid node visitor",
+      9: "Interpreter: Universe destroyal OwO",
+     10: "Interpreter: Object doesn't own this value",
+     11: "Interpreter: Asked for reference from unary number operator but got bullied",
+     12: "Interpreter: You referenced, what even wasn't there",
+     13: "Interpreter: Wtf is this? This node doesn't even have a value",
+     14: "Interpreter: Binary operation failed, now you are gay",
+     15: "Lexer: Invalid token, rofl",
+     16: "Value: Not a byte, bro",
+     17: "Import: File not found",
+     18: "Interpreter: Tried to get from non-object",
+     19: "Import: this sauce is not available",
+     20: "Import: need sauce!",
+     21: "Interpreter: Cannot assign to this object!",
+     22: "Lexer: this not a char, grrrr",
+     23: "Interpreter: Unknown stream, go watch some twitch"
+    }
+    self.error = d[code]
+    self.notices = notices
 
 def quit(code = 0, error = None):
   for s in streams:
     streams[s].flush()
-    if s > 2:
-      streams[s].close()
+    streams[s].close()
   if error:
     print(error)
   exit(code)
+
+class Stream:
+  def __init__(self, read, write, close, flush):
+    self.read = read
+    self.write = write
+    self.close = close
+    self.flush = flush
+
+class TextStream(Stream):
+  def __init__(self, stream):
+    Stream.__init__(
+      self,
+      lambda: ord(stream.read(1) or "\0"),
+      stream.write,
+      stream.close,
+      stream.flush
+    )
+
+class WebStream(Stream):
+  def __init__(self, stream):
+
+    self.data = bytearray()
+    self.buffer = -1
+
+    def read():
+      if self.buffer == -1:
+        self.buffer = bytearray(stream.recv(), "utf8")
+
+      ret = self.buffer[:1]
+      self.buffer = self.buffer[1:]
+      if ret: return ret[0]
+      else:
+        self.buffer = -1
+        return -1
+
+    def flush():
+      if stream.connected:
+        stream.send(self.data)
+      self.data = bytearray()
+
+    def write(a):
+      self.data.append(*a)
+
+    Stream.__init__(
+      self,
+      read,
+      write,
+      stream.close,
+      flush
+    )
+
 
 class Token:
   def __init__(self, value, t):
@@ -68,7 +123,7 @@ class Token:
 
 def asi(j):
   if not -9_223_372_036_854_775_808 <= j <= 9_223_372_036_854_775_807:
-    error(6)
+    raise HoverflyError(6)
 
 def lexer(f):
   d = f
@@ -79,7 +134,8 @@ def lexer(f):
     "\\'": "'",
     "\\\"": "\"",
     "\\\\": "\\",
-    "\\b": "\b"
+    "\\b": "\b",
+    "\\0": "\0"
   }
   for s in re.findall(r'''(?x)(?<!\\)".*?(?<!\\)"''', f):
     c = 0
@@ -99,13 +155,13 @@ def lexer(f):
     f = f.replace(s, f"@{c}", 1)
     d = d.replace(s, "", 1)
   if "@" in d:
-    error(1)
+    raise HoverflyError(1)
   for c in re.findall(r"""('\\?[^\\]'|'\\\\')""", f):
     ch = c[1:-1]
     if ch in replace:
       ch = replace[ch]
     if len(ch) > 1:
-      error(22, f"Char: {c}")
+      raise HoverflyError(22, f"Char: {c}")
     f = f.replace(c, str(ord(ch)))
   current = ""
   tokens_ = []
@@ -136,7 +192,7 @@ def lexer(f):
     elif i in " \t":
       pass
     else:
-      error(15, f"Token: {i}")
+      raise HoverflyError(15, f"Token: {i}")
 
   if current:
     tokens_.append(current)
@@ -224,7 +280,7 @@ class Parser:
       self.n()
       res = self.assign()
       if self.current.type != "RBR":
-        error(4)
+        raise HoverflyError(4)
       self.n()
       return res
     elif token.type == "VAL":
@@ -234,9 +290,9 @@ class Parser:
       self.n()
       return UnOp(token, self.factor())
     elif token.type == "END":
-      return
+      return None
     else:
-      error(7)
+      raise HoverflyError(7)
 
 class Reference:
   def __init__(self, place, reference):
@@ -287,118 +343,158 @@ class Interpreter:
     return visiting(node, ref)
 
   def ex(self, node, ref):
-    error(8, f"Node: {type(node).__name__}")
+    raise HoverflyError(8, f"Node: {type(node).__name__}")
 
   def visitBinOp(self, node, ref):
-    try:
-      match node.token.type:
-        case "ADD":
-          j = self.visit(node.left) + self.visit(node.right)
-          asi(j)
-          return j
-        case "SUB":
-          j = self.visit(node.left) - self.visit(node.right)
-          asi(j)
-          return j
-        case "MUL":
-          j = self.visit(node.left) * self.visit(node.right)
-          asi(j)
-          return j
-        case "DIV":
-          l, r = self.visit(node.left), self.visit(node.right)
-          if l == r == 0:
-            return 0
-          elif r == 0:
-            error(9)
-          j = l / r
-          j = int(j)
-          asi(j)
-          return j
-        case "GET":
-          if node.left.token.type not in ["OBJ", "GET", "STN"]:
-            error(18)
-          if ref:
-            return Reference(self.visit(node.left), self.visit(node.right))
-          else:
-            try:
-              r = self.visit(node.right)
-              return self.visit(node.left)[r]
-            except:
-              error(10, f"Value {r} from {node.left}")
-        case "ASS":
-          source = self.visit(node.left, True)
-          result = self.visit(node.right)
+    match node.token.type:
+      case "ADD":
+        j = self.visit(node.left) + self.visit(node.right)
+        asi(j)
+        return j
+      case "SUB":
+        j = self.visit(node.left) - self.visit(node.right)
+        asi(j)
+        return j
+      case "MUL":
+        j = self.visit(node.left) * self.visit(node.right)
+        asi(j)
+        return j
+      case "DIV":
+        l, r = self.visit(node.left), self.visit(node.right)
+        if l == r == 0:
+          return 0
+        elif r == 0:
+          raise HoverflyError(9)
+        j = l / r
+        j = int(j)
+        asi(j)
+        return j
+      case "GET":
+        if node.left.token.type not in ["OBJ", "GET", "STN"]:
+          raise HoverflyError(18)
+        if ref:
+          return Reference(self.visit(node.left), self.visit(node.right))
+        else:
+          r = self.visit(node.right)
+          l = self.visit(node.left)
+          if not r in l:
+            raise HoverflyError(10, f"Value {r} from {node.left}")
+          return self.visit(node.left)[r]
+      case "ASS":
+        source = self.visit(node.left, True)
+        result = self.visit(node.right)
 
-          if source.place == "numbers":
-            result = int(result or 0)
-            self.numbers[source.reference] = result
-          elif source.place == "streams":
-            if result is not None:
-              if not 0 <= result <= 255:
-                error(16, f"Value: {result}")
-            b = bytes([result or 0])
-            streams[source.reference].write(b)
+        if source.place == "numbers":
+          result = int(result or 0)
+          self.numbers[source.reference] = result
+        elif source.place == "streams":
+          if isinstance(result, dict):
+
+            path = ""
+            for i in result[1]:
+              if result[1][i] == 0:
+                break
+              path += chr(result[1][i])
+
+            # first 4 bytes: type of stream
+            streamType = result[2] % (1 << 4)
+            match streamType:
+              case 0:
+                # just text
+                # 5th byte:
+                # 0 - w
+                # 1 - r
+
+                flags = "wr"
+
+                flag = flags[(result[2] & (1 << 4)) >> 4]
+                stream = TextStream(open(path, flag + "b"))
+              case 1:
+                # websocket
+                ws = WebSocket()
+                ws.connect(path)
+                stream = WebStream(ws)
+              case _:
+                raise HoverflyError(23, f"Stream type: {streamType}")
+
+            if source.reference in streams:
+              streams[source.reference].close()
+            streams[source.reference] = stream
+
+            return source.reference
+
+          if result is not None:
+            if isinstance(streams[source.reference], WebStream):
+              if result == -1:
+                streams[source.reference].flush()
+                return
+
+            if not 0 <= result <= 255:
+              raise HoverflyError(16, f"Value: {result}")
+          b = bytes([result or 0])
+          streams[source.reference].write(b)
+          if not isinstance(streams[source.reference], WebStream):
             if ord("\n") in b:
               streams[source.reference].flush()
-          else:
-            if result is None:
-              result = { }
-            elif result == "":
-              result = { 0: 0 }
-            source.place[source.reference] = result
-          return result
 
-    except:
-      error(14, "left: " + str(node.left),
-                "right: " + str(node.right))
+        else:
+          if result is None:
+            result = { }
+          elif result == "":
+            result = { 0: 0 }
+          source.place[source.reference] = result
+        return result
+
+    #except HoverflyError as err:
+      #handle(err)
+      #error(14, "left: " + str(node.left),
+      #          "right: " + str(node.right))
 
   def visitUnOp(self, node, ref):
-    try:
-      match node.token.type:
-        case "NUM":
-          r = self.visit(node.right)
-          if ref: return Reference("numbers", r)
-          else: return self.numbers[r]
-        case "OBJ":
-          r = self.visit(node.right)
-          if ref: return Reference(objects, r)
-          else: return objects[r]
-        case "STN":
-          r = self.visit(node.right)
-          if ref: error(21, "string")
-          else: return strings[r]
-        case "STR":
-          r = self.visit(node.right)
-          if ref: return Reference("streams", r)
-          else:
-            c = streams[r].read(1)
-            if c: return ord(c)
-            else: return 0
-        case "FLG":
-          r = self.visit(node.right)
-          if ref: error(21, "flag")
-          else: return self.flags[r]
-        case "SUB":
-          r = self.visit(node.right)
-          if ref: error(11)
-          else: return(- r)
-        case "ADD":
-          r = self.visit(node.right)
-          if ref: error(11)
-          else: return r
-    except:
-      error(12, f"Reference: {node}")
+    #try:
+    match node.token.type:
+      case "NUM":
+        r = self.visit(node.right)
+        if ref: return Reference("numbers", r)
+        else: return self.numbers[r]
+      case "OBJ":
+        r = self.visit(node.right)
+        if ref: return Reference(objects, r)
+        else: return objects[r]
+      case "STN":
+        r = self.visit(node.right)
+        if ref: error(21, "string")
+        else: return strings[r]
+      case "STR":
+        r = self.visit(node.right)
+        if ref: return Reference("streams", r)
+        else:
+          c = streams[r].read()
+          return c
+      case "FLG":
+        r = self.visit(node.right)
+        if ref: error(21, "flag")
+        else: return self.flags[r]
+      case "SUB":
+        r = self.visit(node.right)
+        if ref: error(11)
+        else: return(- r)
+      case "ADD":
+        r = self.visit(node.right)
+        if ref: error(11)
+        else: return r
+    #except:
+      #error(12, f"Reference: {node}")
 
   def visitVal(self, node, ref):
-    try:
-      return node.value
-    except:
-      error(13)
+    if not hasattr(node, "value"):
+      raise HoverflyError(13)
+    return node.value
 
 objects = { }
-streams = { 0: open(0, "rb"),
-            1: open(1, "wb"),
-            2: open(2, "wb")}
+streams = { 0: TextStream(open("/dev/stdin", "rb")),
+            1: TextStream(open("/dev/stdout", "wb")),
+            2: TextStream(open("/dev/stderr", "wb"))}
 strings = { }
 imports = { }
 
@@ -471,7 +567,7 @@ def run(code = None, lib = None):
               imported = f.read()
             imports[library] = { "code": imported }
           except:
-            error(17, f"Lib: {library}")
+            raise HoverflyError(17, f"Lib: {library}")
         code = library
 
       else:
@@ -500,5 +596,8 @@ def run(code = None, lib = None):
 
   return
 
-run(code = code)
+try:
+  run(code = code)
+except HoverflyError as err:
+  handle(err)
 quit()
