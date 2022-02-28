@@ -14,7 +14,6 @@ base = os.path.dirname(__file__)
 lib_base = os.path.join(base, "lib")
 
 import re
-from websocket import WebSocket
 
 def handle(err):
   n = [f"[Notice] {i}" for i in err.notices]
@@ -411,6 +410,7 @@ class Interpreter:
                 stream = TextStream(open(path, flag + "b"))
               case 1:
                 # websocket
+                from websocket import WebSocket
                 ws = WebSocket()
                 ws.connect(path)
                 stream = WebStream(ws)
